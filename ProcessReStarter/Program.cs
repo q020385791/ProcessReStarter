@@ -22,7 +22,7 @@ namespace ProcessReStarter
         static void Main(string[] args)
         {
             InitConfig();
-
+            WriteLog("Config_Init");
             #region Killer
 
             //取得config 要關掉的程式名稱用 ','區分開
@@ -36,6 +36,7 @@ namespace ProcessReStarter
                 string configpath = Path.Combine(Environment.CurrentDirectory, ConfigName);
                 Process.Start(configpath);
                 Console.ReadKey();
+                WriteLog("請先設定Config檔案，KillProcessNames");
                 return;
             }
             //要關掉的程式名稱用 ','區分開
@@ -47,7 +48,23 @@ namespace ProcessReStarter
                 {
                     if (process.MainWindowTitle == processName)
                     {
-                        process.Kill();
+                        try
+                        {
+                            process.Kill();
+                            WriteLog("Kill：" + processName);
+                            
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine();
+                            WriteLog("------------------------------");
+                            WriteLog("Kill：" + processName+"_Failed");
+                            WriteLog(ex.Message);
+                            WriteLog(ex.InnerException.Message);
+                            WriteLog("------------------------------");
+                        }
+                        
+                    
                     }
                 }
             }
@@ -60,7 +77,17 @@ namespace ProcessReStarter
             List<string> lstStartProcessPath = strreStartProcessNames.Split(',').ToList();
             foreach (string  RestartProcess in lstStartProcessPath)
             {
-                Process.Start(RestartProcess);
+                try
+                {
+                    Process.Start(RestartProcess);
+                    WriteLog("ProcessStart：" + RestartProcess);
+                }
+                catch (Exception ex)
+                {
+                    WriteLog("------------------------------");
+                    WriteLog("RestartFailed："+ RestartProcess);
+                    WriteLog("------------------------------");
+                }
             }
             #endregion
         }
@@ -104,6 +131,49 @@ namespace ProcessReStarter
             string output = Newtonsoft.Json.JsonConvert.SerializeObject(jobject, Newtonsoft.Json.Formatting.Indented);
             File.WriteAllText(ConfigName, output);
             return true;
+        }
+        #endregion
+
+
+        #region Log紀錄
+        /// <summary>
+        /// Log記錄檔
+        /// </summary>
+        /// <param name="Message"></param>
+        public static void WriteLog(string Message)
+        {
+
+            //取得當前目錄
+            _Path = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            //_Path = HttpContext.Current.Server.MapPath("~/");
+            //如果Log資料夾不存在則創立資料夾
+            string LogFolderPath = Path.Combine(_Path, "Log");
+            if (!Directory.Exists(LogFolderPath))
+            {
+                Directory.CreateDirectory(LogFolderPath);
+            }
+            try
+            {
+                string LogName = "Log_" + DateTime.Today.Year.ToString() + "_" + DateTime.Today.Month.ToString() + "_" + DateTime.Today.Day.ToString() + ".txt";
+
+
+                using (StreamWriter w = File.AppendText(Path.Combine(LogFolderPath, LogName)))
+                {
+
+                    w.WriteAsync(DateTime.Now.ToString("]yyyy/MM/dd HH:mm:ss]") + ":" + Message);
+                    w.WriteAsync(Environment.NewLine);
+                }
+            }
+            catch (Exception ex)
+            {
+                string LogName = "Log_" + DateTime.Today.Year.ToString() + "_" + DateTime.Today.Month.ToString() + "_" + DateTime.Today.Day.ToString() + ".txt";
+
+                using (StreamWriter w = File.AppendText(Path.Combine(_Path, LogName)))
+                {
+
+                    w.WriteAsync(ex.Message);
+                }
+            }
         }
         #endregion
     }
